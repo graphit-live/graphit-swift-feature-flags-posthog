@@ -1,0 +1,15 @@
+{
+  "originHash" : "0a42132ce6a4e303dabb3d3af53c1f062e71eb62cc8bfa8c4142b30c305bd22c",
+  "pins" : [
+    {
+      "identity" : "graphit-swift-feature-flags",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/graphit-live/graphit-swift-feature-flags",
+      "state" : {
+        "revision" : "2addabefd59b0c57454a1f47574dfb7176b253d3",
+        "version" : "0.1.0"
+      }
+    }
+  ],
+  "version" : 3
+}

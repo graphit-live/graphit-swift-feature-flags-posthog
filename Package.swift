@@ -14,7 +14,10 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(path: "../graphit-swift-feature-flags")
+        .package(
+            url: "https://github.com/graphit-live/graphit-swift-feature-flags",
+            exact: "0.1.0"
+        )
     ],
     targets: [
         .target(
