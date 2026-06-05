@@ -5,7 +5,8 @@ import Foundation
 /// The client stores immutable configuration and is safe to pass across
 /// concurrency domains. It is not `MainActor`-isolated. Initializing the client
 /// performs configuration setup only and must not contact PostHog, touch the
-/// filesystem, start background work, or read app state.
+/// filesystem, start background work, or read app state. Callers own returned
+/// `FeatureFlags` values and update app state by replacing those values.
 public final class PostHogFeatureFlagClient: Sendable {
     /// The configuration supplied when the client was created.
     public let configuration: PostHogFeatureFlagConfiguration
@@ -40,7 +41,8 @@ public final class PostHogFeatureFlagClient: Sendable {
     ///
     /// Performs one cancellable HTTP `POST` to PostHog's `/flags?v=2` endpoint,
     /// maps the response into `FeatureFlags`, and returns request metadata for
-    /// partial and quota-limited responses.
+    /// partial and quota-limited responses. The method does not cache results,
+    /// start refresh work, or mutate app-owned state.
     ///
     /// - Parameter context: The PostHog evaluation context for one request.
     /// - Returns: A validated feature-flag evaluation result.
