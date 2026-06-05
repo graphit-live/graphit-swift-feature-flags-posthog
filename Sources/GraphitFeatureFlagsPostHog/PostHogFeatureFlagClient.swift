@@ -38,10 +38,14 @@ public final class PostHogFeatureFlagClient: Sendable {
         for context: PostHogFeatureFlagContext
     ) async throws -> PostHogFeatureFlagEvaluation {
         try Task.checkCancellation()
-        _ = try PostHogValidation.validateContext(context)
+        let validatedContext = try PostHogValidation.validateContext(context)
+        _ = try PostHogFlagsRequest.makeURLRequest(
+            configuration: validatedConfiguration,
+            context: validatedContext
+        )
 
         throw PostHogFeatureFlagError.transportFailure(
-            "PostHog feature flag evaluation is not implemented in this package shell."
+            "PostHog feature flag transport is not implemented in this package shell."
         )
     }
 }
