@@ -58,12 +58,46 @@ struct ContextValidationTests {
         #expect(validated.evaluationContexts.map(\.rawValue) == ["ios", "production"])
     }
 
+    @Test("context text length boundaries are enforced")
+    func contextTextLengthBoundaries() {
+        let exactLimitContext = context(
+            distinctID: String(repeating: "d", count: 1_024),
+            groups: [
+                PostHogGroup(
+                    type: String(repeating: "t", count: 256),
+                    id: String(repeating: "g", count: 1_024)
+                )
+            ],
+            evaluationContexts: [PostHogEvaluationContextTag(String(repeating: "e", count: 256))]
+        )
+        #expect(invalidInputDescription(for: exactLimitContext) == nil)
+
+        #expect(invalidInputDescription(for: context(distinctID: String(repeating: "d", count: 1_025))) != nil)
+        #expect(
+            invalidInputDescription(
+                for: context(groups: [
+                    PostHogGroup(type: String(repeating: "t", count: 257), id: "tenant-1")
+                ])
+            ) != nil
+        )
+        #expect(
+            invalidInputDescription(
+                for: context(groups: [
+                    PostHogGroup(type: "company", id: String(repeating: "g", count: 1_025))
+                ])
+            ) != nil
+        )
+        #expect(
+            invalidInputDescription(
+                for: context(evaluationContexts: [PostHogEvaluationContextTag(String(repeating: "e", count: 257))])
+            ) != nil
+        )
+    }
+
     @Test("distinct ID validation rejects malformed text")
     func distinctIDValidation() {
         #expect(invalidInputDescription(for: context(distinctID: "")) != nil)
         #expect(invalidInputDescription(for: context(distinctID: "private-user\n")) != nil)
-        #expect(invalidInputDescription(for: context(distinctID: "private-user\u{85}")) != nil)
-        #expect(invalidInputDescription(for: context(distinctID: String(repeating: "a", count: 1_025))) != nil)
     }
 
     @Test("group validation rejects malformed and duplicate groups")
@@ -80,11 +114,6 @@ struct ContextValidationTests {
         )
         #expect(
             invalidInputDescription(
-                for: context(groups: [PostHogGroup(type: String(repeating: "a", count: 257), id: "tenant-1")])
-            ) != nil
-        )
-        #expect(
-            invalidInputDescription(
                 for: context(groups: [PostHogGroup(type: "company", id: "")])
             ) != nil
         )
@@ -96,6 +125,14 @@ struct ContextValidationTests {
         #expect(groupIDDescription != nil)
         #expect(groupIDDescription?.contains(privateGroupID) == false)
         #expect(groupIDDescription?.contains("private-tenant") == false)
+
+        let c1PrivateGroupID = "private-tenant\u{85}"
+        let c1GroupIDDescription = invalidInputDescription(
+            for: context(groups: [PostHogGroup(type: "company", id: c1PrivateGroupID)])
+        )
+        #expect(c1GroupIDDescription != nil)
+        #expect(c1GroupIDDescription?.contains(c1PrivateGroupID) == false)
+        #expect(c1GroupIDDescription?.contains("private-tenant") == false)
 
         #expect(
             invalidInputDescription(
@@ -119,9 +156,19 @@ struct ContextValidationTests {
                 for: context(evaluationContexts: [PostHogEvaluationContextTag("production\n")])
             ) != nil
         )
+    }
+
+    @Test("context validation rejects C1 control scalars")
+    func contextValidationRejectsC1ControlScalars() {
+        #expect(invalidInputDescription(for: context(distinctID: "private-user\u{85}")) != nil)
         #expect(
             invalidInputDescription(
-                for: context(evaluationContexts: [PostHogEvaluationContextTag(String(repeating: "a", count: 257))])
+                for: context(groups: [PostHogGroup(type: "company\u{85}", id: "tenant-1")])
+            ) != nil
+        )
+        #expect(
+            invalidInputDescription(
+                for: context(evaluationContexts: [PostHogEvaluationContextTag("production\u{85}")])
             ) != nil
         )
     }

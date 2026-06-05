@@ -67,7 +67,19 @@ struct ConfigurationValidationTests {
         #expect(isValidConfiguration(configuration(host: PostHogHost(URL(string: "http://localhost:8000")!))))
         #expect(isValidConfiguration(configuration(host: PostHogHost(URL(string: "https://posthog.example.com/")!))))
         #expect(isValidConfiguration(configuration(runtime: .customUserAgent("posthog-ios/custom graphit-test/1.0"))))
+    }
+
+    @Test("configuration text length boundaries are enforced")
+    func configurationTextLengthBoundaries() {
         #expect(isValidConfiguration(configuration(projectToken: String(repeating: "a", count: 512))))
+        #expect(invalidConfigurationDescription(for: configuration(projectToken: String(repeating: "a", count: 513))) != nil)
+
+        #expect(isValidConfiguration(configuration(runtime: .customUserAgent(String(repeating: "a", count: 512)))))
+        #expect(
+            invalidConfigurationDescription(
+                for: configuration(runtime: .customUserAgent(String(repeating: "a", count: 513)))
+            ) != nil
+        )
     }
 
     @Test("invalid custom hosts are rejected")
@@ -92,7 +104,7 @@ struct ConfigurationValidationTests {
         #expect(invalidConfigurationDescription(for: configuration(projectToken: "")) != nil)
         #expect(invalidConfigurationDescription(for: configuration(projectToken: "ph_\nsecret")) != nil)
         #expect(invalidConfigurationDescription(for: configuration(projectToken: "ph_\u{7F}secret")) != nil)
-        #expect(invalidConfigurationDescription(for: configuration(projectToken: String(repeating: "a", count: 513))) != nil)
+        #expect(invalidConfigurationDescription(for: configuration(projectToken: "ph_\u{85}secret")) != nil)
     }
 
     @Test("runtime User-Agent policy is validated and internally resolvable")
@@ -119,7 +131,7 @@ struct ConfigurationValidationTests {
 
         #expect(
             invalidConfigurationDescription(
-                for: configuration(runtime: .customUserAgent(String(repeating: "a", count: 513)))
+                for: configuration(runtime: .customUserAgent("private-runtime\u{85}secret"))
             ) != nil
         )
     }
@@ -146,6 +158,14 @@ struct ConfigurationValidationTests {
         #expect(runtimeDescription != nil)
         #expect(runtimeDescription?.contains(rawUserAgent) == false)
         #expect(runtimeDescription?.contains("secret-runtime") == false)
+
+        let rawC1UserAgent = "secret-runtime\u{85}1.0"
+        let c1RuntimeDescription = invalidConfigurationDescription(
+            for: configuration(runtime: .customUserAgent(rawC1UserAgent))
+        )
+        #expect(c1RuntimeDescription != nil)
+        #expect(c1RuntimeDescription?.contains(rawC1UserAgent) == false)
+        #expect(c1RuntimeDescription?.contains("secret-runtime") == false)
     }
 }
 
