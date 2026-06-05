@@ -18,4 +18,16 @@ public struct PostHogFeatureFlagEvaluation: Sendable {
 
     /// Quota-limit categories reported by PostHog.
     public let quotaLimits: Set<PostHogQuotaLimit>
+
+    internal init(
+        featureFlags: FeatureFlags,
+        requestID: String?,
+        isPartial: Bool,
+        quotaLimits: Set<PostHogQuotaLimit>
+    ) {
+        self.featureFlags = featureFlags
+        self.requestID = requestID
+        self.isPartial = isPartial
+        self.quotaLimits = quotaLimits
+    }
 }
