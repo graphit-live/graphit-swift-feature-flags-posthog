@@ -126,7 +126,7 @@ struct ContextValidationTests {
         )
     }
 
-    @Test("client evaluation rejects invalid context before placeholder transport work")
+    @Test("client evaluation rejects invalid context before transport work")
     func clientEvaluationRejectsInvalidContext() async throws {
         let privateDistinctID = "private-user\n"
         let client = try PostHogFeatureFlagClient(

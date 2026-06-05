@@ -1,3 +1,5 @@
+import Foundation
+
 /// A resource-owning PostHog feature-flag evaluation client.
 ///
 /// The client stores immutable configuration and is safe to pass across
@@ -9,6 +11,7 @@ public final class PostHogFeatureFlagClient: Sendable {
     public let configuration: PostHogFeatureFlagConfiguration
 
     private let validatedConfiguration: ValidatedPostHogConfiguration
+    private let transport: any PostHogHTTPTransport
 
     /// Creates a PostHog feature-flag client.
     ///
@@ -17,17 +20,27 @@ public final class PostHogFeatureFlagClient: Sendable {
     ///
     /// - Parameter configuration: The PostHog feature-flag configuration.
     /// - Throws: `PostHogFeatureFlagError.invalidConfiguration` when validation rejects the configuration.
-    public init(configuration: PostHogFeatureFlagConfiguration) throws {
+    public convenience init(configuration: PostHogFeatureFlagConfiguration) throws {
+        try self.init(
+            configuration: configuration,
+            transport: URLSessionPostHogHTTPTransport()
+        )
+    }
+
+    internal init(
+        configuration: PostHogFeatureFlagConfiguration,
+        transport: any PostHogHTTPTransport
+    ) throws {
         self.validatedConfiguration = try PostHogValidation.validateConfiguration(configuration)
         self.configuration = configuration
+        self.transport = transport
     }
 
     /// Evaluates PostHog feature flags for one context.
     ///
-    /// The complete v1 implementation performs one cancellable HTTP `POST` to
-    /// PostHog's `/flags?v=2` endpoint, maps the response into `FeatureFlags`,
-    /// and returns request metadata for partial and quota-limited responses.
-    /// The package shell does not perform network work.
+    /// Performs one cancellable HTTP `POST` to PostHog's `/flags?v=2` endpoint,
+    /// maps the response into `FeatureFlags`, and returns request metadata for
+    /// partial and quota-limited responses.
     ///
     /// - Parameter context: The PostHog evaluation context for one request.
     /// - Returns: A validated feature-flag evaluation result.
@@ -38,14 +51,54 @@ public final class PostHogFeatureFlagClient: Sendable {
         for context: PostHogFeatureFlagContext
     ) async throws -> PostHogFeatureFlagEvaluation {
         try Task.checkCancellation()
+
         let validatedContext = try PostHogValidation.validateContext(context)
-        _ = try PostHogFlagsRequest.makeURLRequest(
+        let request = try PostHogFlagsRequest.makeURLRequest(
             configuration: validatedConfiguration,
             context: validatedContext
         )
 
-        throw PostHogFeatureFlagError.transportFailure(
-            "PostHog feature flag transport is not implemented in this package shell."
-        )
+        try Task.checkCancellation()
+
+        let response: PostHogHTTPTransportResponse
+        do {
+            response = try await transport.execute(request)
+        } catch {
+            if Self.isCancellation(error) {
+                throw CancellationError()
+            }
+
+            throw Self.transportFailure(from: error)
+        }
+
+        try Task.checkCancellation()
+
+        guard (200..<300).contains(response.statusCode) else {
+            throw PostHogFeatureFlagError.unexpectedStatusCode(response.statusCode)
+        }
+
+        try Task.checkCancellation()
+
+        return try PostHogFlagsMapper.makeEvaluation(from: response.data)
+    }
+
+    private static func isCancellation(_ error: any Error) -> Bool {
+        if error is CancellationError {
+            return true
+        }
+
+        if let urlError = error as? URLError, urlError.code == .cancelled {
+            return true
+        }
+
+        return false
+    }
+
+    private static func transportFailure(from error: any Error) -> PostHogFeatureFlagError {
+        if let urlError = error as? URLError, urlError.code == .timedOut {
+            return .transportFailure("The PostHog feature flag request timed out.")
+        }
+
+        return .transportFailure("The PostHog feature flag request failed before a valid response was received.")
     }
 }

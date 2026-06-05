@@ -4,8 +4,8 @@ import Testing
 
 @Suite("Package smoke tests")
 struct PackageSmokeTests {
-    @Test("public API shell constructs a client without I/O")
-    func clientShellConstructs() throws {
+    @Test("public API constructs a client without I/O")
+    func clientConstructs() throws {
         let configuration = PostHogFeatureFlagConfiguration(
             projectToken: PostHogProjectToken("ph_project_token")
         )
