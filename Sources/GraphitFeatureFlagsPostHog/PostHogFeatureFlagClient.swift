@@ -8,15 +8,17 @@ public final class PostHogFeatureFlagClient: Sendable {
     /// The configuration supplied when the client was created.
     public let configuration: PostHogFeatureFlagConfiguration
 
+    private let validatedConfiguration: ValidatedPostHogConfiguration
+
     /// Creates a PostHog feature-flag client.
     ///
-    /// This initializer performs no network or filesystem I/O. Full semantic
-    /// configuration validation is implemented by the behavior slices after the
-    /// package shell.
+    /// This initializer validates configuration and performs no network or
+    /// filesystem I/O.
     ///
     /// - Parameter configuration: The PostHog feature-flag configuration.
     /// - Throws: `PostHogFeatureFlagError.invalidConfiguration` when validation rejects the configuration.
     public init(configuration: PostHogFeatureFlagConfiguration) throws {
+        self.validatedConfiguration = try PostHogValidation.validateConfiguration(configuration)
         self.configuration = configuration
     }
 
@@ -35,6 +37,9 @@ public final class PostHogFeatureFlagClient: Sendable {
     public func evaluateFeatureFlags(
         for context: PostHogFeatureFlagContext
     ) async throws -> PostHogFeatureFlagEvaluation {
+        try Task.checkCancellation()
+        _ = try PostHogValidation.validateContext(context)
+
         throw PostHogFeatureFlagError.transportFailure(
             "PostHog feature flag evaluation is not implemented in this package shell."
         )

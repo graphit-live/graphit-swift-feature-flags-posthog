@@ -16,6 +16,26 @@ public struct PostHogEvaluationRuntime: Hashable, Sendable, CustomStringConverti
         self.storage = storage
     }
 
+    internal static let defaultClientUserAgent = "posthog-ios/1.0.0 graphit-sdk/0.1.0"
+
+    internal var userAgentForRequests: String {
+        switch storage {
+        case .client:
+            Self.defaultClientUserAgent
+        case .customUserAgent(let userAgent):
+            userAgent
+        }
+    }
+
+    internal var usesCustomUserAgent: Bool {
+        switch storage {
+        case .client:
+            false
+        case .customUserAgent:
+            true
+        }
+    }
+
     /// The default client-runtime signal for PostHog feature-flag evaluation.
     public static let client: PostHogEvaluationRuntime = PostHogEvaluationRuntime(storage: .client)
 

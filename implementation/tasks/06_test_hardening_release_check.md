@@ -23,6 +23,8 @@ If implementation shifts from this task/spec, stop and align before continuing.
 - Audit for accidental globals, singleton state, service locators, task-local dependency lookup, property wrappers, macros, dynamic member lookup, provider seams, cache APIs, refresh loops, background tasks, or analytics hooks.
 - Confirm ordinary tests use fake transport, not real PostHog network calls.
 - Confirm public error descriptions and redacted descriptions do not leak secrets/private identifiers.
+- Confirm every `PostHogFeatureFlagError` associated message is package-owned and sanitized before being interpolated by `description`.
+- Add any missing validation boundary tests for exact-limit and over-limit text, including group IDs and C1 control scalars.
 - Confirm default User-Agent for v0.1.0 is exactly `posthog-ios/1.0.0 graphit-sdk/0.1.0`.
 - Confirm `graphit-sdk/<version>` matches intended release tag without leading `v` before tagging.
 - Run debug and release builds.
@@ -37,7 +39,8 @@ If implementation shifts from this task/spec, stop and align before continuing.
 - no concurrency warnings;
 - no public API outside `Spec.md` without explicit alignment;
 - no cancellation wrapping;
-- no raw request/response body leakage in errors.
+- no raw request/response body leakage in errors;
+- no unsanitized associated messages in public error descriptions.
 
 ## Verify
 
